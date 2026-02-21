@@ -44,6 +44,7 @@ jobs:
           shopt -s dotglob
           mv tt_um_e2e_test/* .
           rmdir tt_um_e2e_test
+          git remote add origin https://github.com/TinyTapeout/tt-e2e-test
 
       # --- RTL test ---
       - name: Install iverilog
