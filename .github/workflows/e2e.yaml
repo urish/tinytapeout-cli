@@ -1,0 +1,46 @@
+name: E2E
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        pdk: [sky130A, ihp-sg13g2]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install CLI
+        run: pip install -e .
+
+      - name: Init project (${{ matrix.pdk }})
+        run: |
+          tt init \
+            --name e2e_test \
+            --tech ${{ matrix.pdk }} \
+            --tiles 1x1 \
+            --author "CI Bot" \
+            --description "E2E test project" \
+            --clock-hz 50000000 \
+            --language Verilog
+
+      - name: Verify project files
+        run: |
+          cd tt_um_e2e_test
+          test -f info.yaml
+          test -f src/project.v
+          test -f test/tb.v
+          grep -q tt_um_e2e_test info.yaml
+          grep -q tt_um_e2e_test src/project.v
+          grep -q tt_um_e2e_test test/tb.v
+          # Verify tt_um_example was fully replaced
+          ! grep -rq tt_um_example .

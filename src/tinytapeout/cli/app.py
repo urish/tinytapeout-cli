@@ -15,7 +15,9 @@ def cli():
 from tinytapeout.cli.commands.check import check  # noqa: E402
 from tinytapeout.cli.commands.doctor import doctor  # noqa: E402
 from tinytapeout.cli.commands.gds import gds  # noqa: E402
+from tinytapeout.cli.commands.init import init  # noqa: E402
 
 cli.add_command(doctor)
+cli.add_command(init)
 cli.add_command(check)
 cli.add_command(gds)
