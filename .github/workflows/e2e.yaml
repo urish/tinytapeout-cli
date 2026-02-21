@@ -61,6 +61,13 @@ jobs:
       - name: tt test (${{ matrix.pdk }})
         run: tt test
 
+      - name: RTL Test Summary
+        if: always()
+        uses: test-summary/action@v2.4
+        with:
+          paths: test/results.xml
+          show: all
+
       # --- GDS hardening (via tt CLI) ---
       - name: Checkout tt-support-tools
         uses: actions/checkout@v4
@@ -94,6 +101,13 @@ jobs:
         env:
           PDK_ROOT: /home/runner/pdk
         run: tt test --gl
+
+      - name: GL Test Summary
+        if: always()
+        uses: test-summary/action@v2.4
+        with:
+          paths: test/results.xml
+          show: all
 
       - name: Upload artifacts
         if: always()

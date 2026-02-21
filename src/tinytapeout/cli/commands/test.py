@@ -3,7 +3,7 @@ from pathlib import Path
 
 import click
 
-from tinytapeout.cli.console import console, is_ci, write_step_summary
+from tinytapeout.cli.console import console
 from tinytapeout.cli.context import detect_context
 from tinytapeout.cli.environment import IVERILOG_MIN_VERSION, check_iverilog
 from tinytapeout.cli.runner import run_make
@@ -68,15 +68,12 @@ def _run_rtl_test(test_dir: Path):
     result = run_make(str(test_dir))
     if result.returncode != 0:
         console.print("[red]RTL tests failed.[/red]")
-        _write_test_summary(test_dir, "RTL")
         sys.exit(1)
 
     if _has_failures(test_dir):
         console.print("[red]RTL tests reported failures.[/red]")
-        _write_test_summary(test_dir, "RTL")
         sys.exit(1)
 
-    _write_test_summary(test_dir, "RTL")
     console.print("[green]RTL tests passed.[/green]")
 
 
@@ -119,15 +116,12 @@ def _run_gl_test(ctx, test_dir: Path):
     result = run_make(str(test_dir), env={"GATES": "yes"})
     if result.returncode != 0:
         console.print("[red]Gate-level tests failed.[/red]")
-        _write_test_summary(test_dir, "Gate-level")
         sys.exit(1)
 
     if _has_failures(test_dir):
         console.print("[red]Gate-level tests reported failures.[/red]")
-        _write_test_summary(test_dir, "Gate-level")
         sys.exit(1)
 
-    _write_test_summary(test_dir, "Gate-level")
     console.print("[green]Gate-level tests passed.[/green]")
 
 
@@ -138,13 +132,3 @@ def _has_failures(test_dir: Path) -> bool:
         return False
     content = results_xml.read_text()
     return "failure" in content
-
-
-def _write_test_summary(test_dir: Path, label: str):
-    """Write test results to GitHub step summary if in CI."""
-    if not is_ci():
-        return
-    results_xml = test_dir / "results.xml"
-    if results_xml.exists():
-        content = results_xml.read_text()
-        write_step_summary(f"## {label} Test Results\n\n```xml\n{content}\n```")
