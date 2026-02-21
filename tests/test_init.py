@@ -169,6 +169,11 @@ class TestInitCommand:
 
     def test_initializes_fresh_git_repo(self, tmp_path: Path, monkeypatch):
         monkeypatch.chdir(tmp_path)
+        # Configure git user so the initial commit succeeds
+        monkeypatch.setenv("GIT_AUTHOR_NAME", "Test")
+        monkeypatch.setenv("GIT_AUTHOR_EMAIL", "test@test.com")
+        monkeypatch.setenv("GIT_COMMITTER_NAME", "Test")
+        monkeypatch.setenv("GIT_COMMITTER_EMAIL", "test@test.com")
         template_dir = _make_fake_template(tmp_path)
 
         with patch.dict(TEMPLATE_REPOS, {"sky130A": str(template_dir)}):
