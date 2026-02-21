@@ -11,18 +11,27 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        pdk: [sky130A, ihp-sg13g2]
+        include:
+          - pdk: sky130A
+            tt_args: ""
+            librelane_version: "2.4.2"
+          - pdk: ihp-sg13g2
+            tt_args: "--ihp"
+            librelane_version: "3.0.0.dev44"
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: cli
 
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
       - name: Install CLI
-        run: pip install -e .
+        run: pip install ./cli
 
-      - name: Init project (${{ matrix.pdk }})
+      # --- tt init ---
+      - name: tt init (${{ matrix.pdk }})
         run: |
           tt init \
             --name e2e_test \
@@ -32,15 +41,82 @@ jobs:
             --description "E2E test project" \
             --clock-hz 50000000 \
             --language Verilog
+          shopt -s dotglob
+          mv tt_um_e2e_test/* .
+          rmdir tt_um_e2e_test
 
-      - name: Verify project files
+      # --- RTL test ---
+      - name: Install iverilog
+        run: sudo apt-get update && sudo apt-get install -y iverilog
+
+      - name: Install test dependencies
+        run: pip install -r test/requirements.txt
+
+      - name: Run RTL test
         run: |
-          cd tt_um_e2e_test
-          test -f info.yaml
-          test -f src/project.v
-          test -f test/tb.v
-          grep -q tt_um_e2e_test info.yaml
-          grep -q tt_um_e2e_test src/project.v
-          grep -q tt_um_e2e_test test/tb.v
-          # Verify tt_um_example was fully replaced
-          ! grep -rq tt_um_example .
+          cd test
+          make clean
+          make
+          ! grep failure results.xml
+
+      # --- GDS hardening ---
+      - name: Checkout tt-support-tools
+        uses: actions/checkout@v4
+        with:
+          repository: TinyTapeout/tt-support-tools
+          path: tt
+
+      - name: Install tt-support-tools dependencies
+        run: pip install -r tt/requirements.txt
+
+      - name: Create user config
+        run: ./tt/tt_tool.py --create-user-config ${{ matrix.tt_args }}
+
+      - name: Install LibreLane
+        run: pip install librelane==${{ matrix.librelane_version }}
+
+      - name: Harden (build GDS)
+        run: ./tt/tt_tool.py --harden ${{ matrix.tt_args }}
+
+      - name: Print stats
+        run: ./tt/tt_tool.py --print-stats ${{ matrix.tt_args }}
+
+      - name: Create submission
+        run: ./tt/tt_tool.py --create-tt-submission ${{ matrix.tt_args }}
+
+      # --- GL test ---
+      - name: Install ${{ matrix.pdk }} PDK
+        uses: TinyTapeout/ciel-action@v1
+        with:
+          pdk_name: ${{ matrix.pdk }}
+          pdk_version: ${{ fromJson('{
+            "sky130A": "0536d02d875c8f67dd7cca3902ac457e62f20005",
+            "ihp-sg13g2": "c4b8b4e5e7a05f375cca3815d51b3a37721fbf5c"
+            }')[matrix.pdk] }}
+          pdk_root: /home/runner/pdk
+
+      - name: Install custom iverilog (for GL sim)
+        run: |
+          wget -q https://github.com/TinyTapeout/iverilog/releases/download/13.0-git-d8c3c51/iverilog_13.0-git-d8c3c51a-1_amd64.deb
+          sudo dpkg -i iverilog_13.0-git-d8c3c51a-1_amd64.deb
+
+      - name: Run GL test
+        env:
+          PDK_ROOT: /home/runner/pdk
+        run: |
+          cp tt_submission/*.v test/gate_level_netlist.v
+          cd test
+          rm -f results.xml
+          make clean
+          GATES=yes make
+          ! grep failure results.xml
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-${{ matrix.pdk }}
+          path: |
+            runs/wokwi/*
+            test/results.xml
+            test/tb.fst
