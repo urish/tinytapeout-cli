@@ -4,7 +4,13 @@ import click
 
 from tinytapeout.cli.console import console, print_status
 from tinytapeout.cli.context import detect_context
-from tinytapeout.cli.environment import check_docker, check_git, check_pdk, check_python
+from tinytapeout.cli.environment import (
+    check_docker,
+    check_git,
+    check_nix_portable,
+    check_pdk,
+    check_python,
+)
 
 
 @click.command()
@@ -37,6 +43,13 @@ def doctor(project_dir: str):
     else:
         print_status("FAIL", "Git not found", style="red")
         all_ok = False
+
+    # nix-portable
+    nix = check_nix_portable()
+    if nix.available:
+        print_status("OK", f"nix-portable (Nix {nix.version})")
+    else:
+        print_status("INFO", "nix-portable not found (optional, for --nix builds)", style="blue")
 
     # PDK
     pdk = check_pdk()

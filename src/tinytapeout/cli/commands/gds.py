@@ -6,7 +6,7 @@ import click
 
 from tinytapeout.cli.console import console, is_ci, write_step_summary
 from tinytapeout.cli.context import detect_context
-from tinytapeout.cli.runner import run_precheck, run_tt_tool
+from tinytapeout.cli.runner import run_librelane_nix, run_precheck, run_tt_tool
 
 
 @click.group()
@@ -18,13 +18,30 @@ def gds():
 @gds.command()
 @click.option("--project-dir", default=".", help="Project directory.")
 @click.option("--no-docker", is_flag=True, help="Do not use Docker for LibreLane.")
+@click.option("--nix", is_flag=True, help="Use nix-portable to run LibreLane.")
+@click.option(
+    "--librelane-version",
+    default="3.0.0.dev52",
+    show_default=True,
+    help="LibreLane version for --nix builds.",
+)
 @click.option(
     "--no-validate",
     is_flag=True,
     help="Skip precheck validation after hardening.",
 )
-def build(project_dir: str, no_docker: bool, no_validate: bool):
+def build(
+    project_dir: str,
+    no_docker: bool,
+    nix: bool,
+    librelane_version: str,
+    no_validate: bool,
+):
     """Harden the project (generate GDS)."""
+    if nix and no_docker:
+        console.print("[red]Cannot use --nix and --no-docker together.[/red]")
+        sys.exit(2)
+
     ctx = detect_context(project_dir)
 
     if not ctx.info_yaml_path.exists():
@@ -41,11 +58,20 @@ def build(project_dir: str, no_docker: bool, no_validate: bool):
         sys.exit(1)
 
     # Step 2: Harden
-    console.print("Hardening design...")
-    harden_args = ["--harden"]
-    if no_docker:
-        harden_args.append("--no-docker")
-    result = run_tt_tool(ctx, *harden_args)
+    if nix:
+        console.print("Hardening design via nix-portable...")
+        result = run_librelane_nix(
+            ctx,
+            version=librelane_version,
+            hide_progress=is_ci(),
+        )
+    else:
+        console.print("Hardening design...")
+        harden_args = ["--harden"]
+        if no_docker:
+            harden_args.append("--no-docker")
+        result = run_tt_tool(ctx, *harden_args)
+
     if result.returncode != 0:
         console.print("[red]Hardening failed.[/red]")
         sys.exit(1)

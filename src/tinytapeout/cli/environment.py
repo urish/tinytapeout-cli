@@ -89,5 +89,27 @@ def check_pdk() -> ToolInfo:
     return ToolInfo(name="PDK", available=False, path=pdk_root)
 
 
+def check_nix_portable() -> ToolInfo:
+    path = shutil.which("nix-portable")
+    if not path:
+        return ToolInfo(name="nix-portable", available=False)
+    try:
+        result = subprocess.run(
+            ["nix-portable", "nix", "--version"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        version = result.stdout.strip().removeprefix("nix (Nix) ")
+        return ToolInfo(
+            name="nix-portable",
+            available=result.returncode == 0,
+            version=version,
+            path=path,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return ToolInfo(name="nix-portable", available=False, path=path)
+
+
 def is_ci() -> bool:
     return os.environ.get("CI") == "true" or os.environ.get("GITHUB_ACTIONS") == "true"
