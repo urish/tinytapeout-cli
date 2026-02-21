@@ -51,10 +51,11 @@ def _make_fake_template(tmp_path: Path) -> Path:
     (template_dir / "docs" / "info.md").write_text("## How it works\n")
 
     # Initialize as a git repo so clone works
-    subprocess.run(["git", "init"], cwd=str(template_dir), capture_output=True)
-    subprocess.run(["git", "add", "."], cwd=str(template_dir), capture_output=True)
+    _git = ["git", "-c", "user.name=Test", "-c", "user.email=test@test.com"]
+    subprocess.run([*_git, "init"], cwd=str(template_dir), capture_output=True)
+    subprocess.run([*_git, "add", "."], cwd=str(template_dir), capture_output=True)
     subprocess.run(
-        ["git", "commit", "--no-gpg-sign", "-m", "init"],
+        [*_git, "commit", "--no-gpg-sign", "-m", "init"],
         cwd=str(template_dir),
         capture_output=True,
     )

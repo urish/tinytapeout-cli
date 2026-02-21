@@ -158,27 +158,14 @@ def _reinit_git(project_dir: Path):
     if git_dir.exists():
         shutil.rmtree(git_dir)
 
-    subprocess.run(
-        ["git", "init"],
-        cwd=str(project_dir),
-        capture_output=True,
-        text=True,
-    )
-    subprocess.run(
-        ["git", "add", "."],
-        cwd=str(project_dir),
-        capture_output=True,
-        text=True,
-    )
-    subprocess.run(
-        [
-            "git",
-            "commit",
-            "--no-gpg-sign",
-            "-m",
-            "Initial commit (from Tiny Tapeout template)",
-        ],
-        cwd=str(project_dir),
-        capture_output=True,
-        text=True,
-    )
+    def _git(*args: str):
+        subprocess.run(
+            ["git", *args],
+            cwd=str(project_dir),
+            capture_output=True,
+            text=True,
+        )
+
+    _git("init")
+    _git("add", ".")
+    _git("commit", "--no-gpg-sign", "-m", "Initial commit (from Tiny Tapeout template)")
