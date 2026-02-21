@@ -1,7 +1,17 @@
 import os
 import subprocess
+from pathlib import Path
 
 from tinytapeout.cli.context import ProjectContext, _tt_tools_python
+
+
+def _tt_tools_env(tt_dir: Path) -> dict[str, str]:
+    """Build an environment with the tt-support-tools venv bin on PATH."""
+    env = os.environ.copy()
+    venv_bin = tt_dir / ".venv" / "bin"
+    if venv_bin.is_dir():
+        env["PATH"] = str(venv_bin) + os.pathsep + env.get("PATH", "")
+    return env
 
 
 def run_tt_tool(
@@ -19,7 +29,9 @@ def run_tt_tool(
     elif ctx.tech == "gf180mcuD":
         cmd.append("--gf")
     cmd.extend(args)
-    return subprocess.run(cmd, capture_output=capture, text=True)
+    return subprocess.run(
+        cmd, capture_output=capture, text=True, env=_tt_tools_env(tt_dir)
+    )
 
 
 def run_precheck(
@@ -44,7 +56,9 @@ def run_precheck(
     cmd = [_tt_tools_python(tt_dir), str(precheck_script)]
     cmd.extend(["--gds", gds_path])
     cmd.extend(args)
-    return subprocess.run(cmd, capture_output=capture, text=True)
+    return subprocess.run(
+        cmd, capture_output=capture, text=True, env=_tt_tools_env(tt_dir)
+    )
 
 
 def run_make(
