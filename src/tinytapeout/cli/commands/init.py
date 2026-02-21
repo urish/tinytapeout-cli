@@ -15,11 +15,8 @@ TEMPLATE_REPOS: dict[str, str] = {
 
 VALID_TECHS = list(TEMPLATE_REPOS.keys())
 
-# Files where tt_um_example must be replaced with the actual top_module name
-RENAME_FILES = [
-    "src/project.v",
-    "test/tb.v",
-]
+# Text file extensions to scan for tt_um_example replacement
+_TEXT_EXTENSIONS = {".v", ".sv", ".yaml", ".yml", ".md", ".py", ".json", ".txt", ".tcl"}
 
 
 def _validate_name(ctx, param, value):
@@ -101,12 +98,8 @@ def init(name, tech, tiles, author, description, clock_hz, language):
         project_dir, top_module, tiles, author, description, clock_hz, language
     )
 
-    # Rename tt_um_example in source files
-    for rel_path in RENAME_FILES:
-        filepath = project_dir / rel_path
-        if filepath.exists():
-            content = filepath.read_text()
-            filepath.write_text(content.replace("tt_um_example", top_module))
+    # Replace tt_um_example with actual top_module in all text files
+    _replace_in_tree(project_dir, "tt_um_example", top_module)
 
     # Remove template .git and init fresh repo
     _reinit_git(project_dir)
@@ -117,6 +110,15 @@ def init(name, tech, tiles, author, description, clock_hz, language):
     console.print("\nNext steps:")
     console.print(f"  cd {project_dir}")
     console.print("  tt check")
+
+
+def _replace_in_tree(root: Path, old: str, new: str):
+    """Replace `old` with `new` in all text files under `root`."""
+    for path in root.rglob("*"):
+        if path.is_file() and path.suffix in _TEXT_EXTENSIONS:
+            content = path.read_text(errors="ignore")
+            if old in content:
+                path.write_text(content.replace(old, new))
 
 
 def _patch_info_yaml(
