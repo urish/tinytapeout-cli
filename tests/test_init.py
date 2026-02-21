@@ -131,6 +131,7 @@ class TestInitCommand:
         assert data["project"]["clock_hz"] == 10000000
         assert data["project"]["tiles"] == "1x2"
         assert data["project"]["language"] == "SystemVerilog"
+        assert data["project"]["pdk"] == "sky130A"
 
     def test_renames_module_in_source_files(self, tmp_path: Path, monkeypatch):
         monkeypatch.chdir(tmp_path)
@@ -296,3 +297,8 @@ class TestInitCommand:
         assert result.exit_code == 0, result.output
         project_dir = tmp_path / "tt_um_ihp_test"
         assert project_dir.exists()
+
+        info_path = project_dir / "info.yaml"
+        with open(info_path) as f:
+            data = yaml.safe_load(f)
+        assert data["project"]["pdk"] == "ihp-sg13g2"

@@ -82,16 +82,7 @@ jobs:
         run: tt gds build --no-validate
 
       # --- GL test ---
-      # IHP uses sky130 standard cells, so GL test always needs sky130A PDK
-      - name: Install sky130A PDK
-        uses: TinyTapeout/ciel-action@v1
-        with:
-          pdk_name: sky130A
-          pdk_version: "0536d02d875c8f67dd7cca3902ac457e62f20005"
-          pdk_root: /home/runner/pdk
-
       - name: Install ${{ matrix.pdk }} PDK
-        if: matrix.pdk != 'sky130A'
         uses: TinyTapeout/ciel-action@v1
         with:
           pdk_name: ${{ matrix.pdk }}

@@ -95,7 +95,7 @@ def init(name, tech, tiles, author, description, clock_hz, language):
 
     # Patch info.yaml
     _patch_info_yaml(
-        project_dir, top_module, tiles, author, description, clock_hz, language
+        project_dir, top_module, tech, tiles, author, description, clock_hz, language
     )
 
     # Replace tt_um_example with actual top_module in all text files
@@ -124,6 +124,7 @@ def _replace_in_tree(root: Path, old: str, new: str):
 def _patch_info_yaml(
     project_dir: Path,
     top_module: str,
+    tech: str,
     tiles: str,
     author: str,
     description: str,
@@ -143,6 +144,7 @@ def _patch_info_yaml(
     project["clock_hz"] = clock_hz
     project["tiles"] = tiles
     project["top_module"] = top_module
+    project["pdk"] = tech
 
     with open(info_yaml_path, "w") as f:
         yaml.dump(
