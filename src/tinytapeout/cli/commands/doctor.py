@@ -2,7 +2,14 @@ import click
 
 from tinytapeout.cli.console import console, print_status
 from tinytapeout.cli.context import detect_context
-from tinytapeout.cli.environment import check_docker, check_git, check_pdk, check_python
+from tinytapeout.cli.environment import (
+    IVERILOG_MIN_VERSION,
+    check_docker,
+    check_git,
+    check_iverilog,
+    check_pdk,
+    check_python,
+)
 
 
 @click.command()
@@ -31,6 +38,27 @@ def doctor(project_dir: str):
     else:
         print_status("FAIL", "Git not found", style="red")
         all_ok = False
+
+    # Icarus Verilog
+    ivl = check_iverilog()
+    if ivl.available:
+        from packaging.version import Version
+
+        try:
+            ver = Version(ivl.version)
+            min_ver = Version(IVERILOG_MIN_VERSION)
+            if ver >= min_ver:
+                print_status("OK", f"iverilog {ivl.version}")
+            else:
+                print_status(
+                    "WARN",
+                    f"iverilog {ivl.version} (>= {IVERILOG_MIN_VERSION} recommended for GL sim)",
+                    style="yellow",
+                )
+        except Exception:
+            print_status("OK", f"iverilog {ivl.version}")
+    else:
+        print_status("WARN", "iverilog not found (needed for simulation)", style="yellow")
 
     # PDK
     pdk = check_pdk()

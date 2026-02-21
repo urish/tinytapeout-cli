@@ -89,5 +89,30 @@ def check_pdk() -> ToolInfo:
     return ToolInfo(name="PDK", available=False, path=pdk_root)
 
 
+def check_iverilog() -> ToolInfo:
+    path = shutil.which("iverilog")
+    if not path:
+        return ToolInfo(name="iverilog", available=False)
+    try:
+        result = subprocess.run(
+            ["iverilog", "-V"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        # First line: "Icarus Verilog version 13.0 (stable) ()"
+        import re
+
+        match = re.search(r"version\s+(\S+)", result.stdout)
+        version = match.group(1) if match else "unknown"
+        return ToolInfo(name="iverilog", available=True, version=version, path=path)
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return ToolInfo(name="iverilog", available=False, path=path)
+
+
+# Minimum iverilog version for gate-level simulation
+IVERILOG_MIN_VERSION = "13.0"
+
+
 def is_ci() -> bool:
     return os.environ.get("CI") == "true" or os.environ.get("GITHUB_ACTIONS") == "true"

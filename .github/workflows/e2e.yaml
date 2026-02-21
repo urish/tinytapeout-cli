@@ -58,12 +58,8 @@ jobs:
       - name: Install test dependencies
         run: pip install -r test/requirements.txt
 
-      - name: Run RTL test
-        run: |
-          cd test
-          make clean
-          make
-          ! grep failure results.xml
+      - name: tt test (${{ matrix.pdk }})
+        run: tt test
 
       # --- GDS hardening (via tt CLI) ---
       - name: Checkout tt-support-tools
@@ -94,16 +90,10 @@ jobs:
           wget -q https://github.com/TinyTapeout/iverilog/releases/download/13.0-git-d8c3c51/iverilog_13.0-git-d8c3c51a-1_amd64.deb
           sudo dpkg -i iverilog_13.0-git-d8c3c51a-1_amd64.deb
 
-      - name: Run GL test
+      - name: tt test --gl (${{ matrix.pdk }})
         env:
           PDK_ROOT: /home/runner/pdk
-        run: |
-          cp tt_submission/*.v test/gate_level_netlist.v
-          cd test
-          rm -f results.xml
-          make clean
-          GATES=yes make
-          ! grep failure results.xml
+        run: tt test --gl
 
       - name: Upload artifacts
         if: always()
