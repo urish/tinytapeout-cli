@@ -31,6 +31,11 @@ jobs:
         run: pip install ./cli
 
       # --- tt init ---
+      - name: Configure git
+        run: |
+          git config --global user.name "CI Bot"
+          git config --global user.email "ci@tinytapeout.com"
+
       - name: tt init (${{ matrix.pdk }})
         run: |
           tt init \

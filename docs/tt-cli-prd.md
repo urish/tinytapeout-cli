@@ -298,6 +298,8 @@ Hardens the project. Delegates to tt-support-tools via subprocess.
 # CLI adds: Rich progress spinner, elapsed time, formatted errors, summary
 ```
 
+**Requirement: hardening must work without a git remote.** Users should be able to run `tt gds build` immediately after `tt init`, before publishing to GitHub. Currently tt-support-tools' `project.harden()` calls `get_git_remote()` and `get_git_commit_hash()` which fail if the repo has no remote or no commits. The CLI (or tt-support-tools) must handle this gracefully — using a placeholder remote URL and/or commit hash when git metadata is unavailable.
+
 ### `tt gds stats`
 ```python
 # Delegates to: python tt/tt_tool.py --print-stats --print-cell-summary [--ihp|--gf]
