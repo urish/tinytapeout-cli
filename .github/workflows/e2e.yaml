@@ -79,7 +79,7 @@ jobs:
           tt/.venv/bin/pip install librelane==${{ matrix.librelane_version }}
 
       - name: tt gds build (${{ matrix.pdk }})
-        run: tt gds build --no-validate --no-docker
+        run: tt gds build --no-validate
 
       # --- GL test ---
       - name: Install ${{ matrix.pdk }} PDK
