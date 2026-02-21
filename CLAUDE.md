@@ -34,7 +34,7 @@ Two-layer design under `src/tinytapeout/`:
 
 **CLI layer** (`cli/`):
 - `app.py` — Click group, registers commands.
-- `commands/` — Command implementations: `doctor` (env checks), `check` (project validation), `gds` (build/stats/validate/view subcommands).
+- `commands/` — Command implementations: `init` (project scaffolding), `doctor` (env checks), `check` (project validation), `gds` (build/stats/validate/view subcommands).
 - `context.py` — `ProjectContext` dataclass: detects project from working directory, manages tt-support-tools clone/update/venv.
 - `environment.py` — Checks for Python, Docker, Git, PDK.
 - `runner.py` — Subprocess wrappers for `tt_tool.py` and precheck.
