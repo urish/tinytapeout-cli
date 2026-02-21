@@ -58,7 +58,9 @@ def doctor(project_dir: str):
         except Exception:
             print_status("OK", f"iverilog {ivl.version}")
     else:
-        print_status("WARN", "iverilog not found (needed for simulation)", style="yellow")
+        print_status(
+            "WARN", "iverilog not found (needed for simulation)", style="yellow"
+        )
 
     # PDK
     pdk = check_pdk()
