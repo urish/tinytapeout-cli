@@ -59,7 +59,7 @@ def build(project_dir: str, no_docker: bool, no_validate: bool):
     if result.stdout:
         console.print(result.stdout)
         if is_ci():
-            write_step_summary(f"## GDS Build Stats\n\n```\n{result.stdout}\n```")
+            write_step_summary(f"## GDS Build Stats\n\n{result.stdout}")
 
     # Step 4: Validate (unless skipped)
     if not no_validate:
