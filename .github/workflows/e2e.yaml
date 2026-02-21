@@ -13,11 +13,11 @@ jobs:
       matrix:
         include:
           - pdk: sky130A
-            tt_args: ""
             librelane_version: "2.4.2"
+            pdk_version: "0536d02d875c8f67dd7cca3902ac457e62f20005"
           - pdk: ihp-sg13g2
-            tt_args: "--ihp"
             librelane_version: "3.0.0.dev44"
+            pdk_version: "c4b8b4e5e7a05f375cca3815d51b3a37721fbf5c"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -59,40 +59,28 @@ jobs:
           make
           ! grep failure results.xml
 
-      # --- GDS hardening ---
+      # --- GDS hardening (via tt CLI) ---
       - name: Checkout tt-support-tools
         uses: actions/checkout@v4
         with:
           repository: TinyTapeout/tt-support-tools
           path: tt
 
-      - name: Install tt-support-tools dependencies
-        run: pip install -r tt/requirements.txt
+      - name: Setup tt-support-tools venv
+        run: |
+          python -m venv tt/.venv
+          tt/.venv/bin/pip install -r tt/requirements.txt
+          tt/.venv/bin/pip install librelane==${{ matrix.librelane_version }}
 
-      - name: Create user config
-        run: ./tt/tt_tool.py --create-user-config ${{ matrix.tt_args }}
-
-      - name: Install LibreLane
-        run: pip install librelane==${{ matrix.librelane_version }}
-
-      - name: Harden (build GDS)
-        run: ./tt/tt_tool.py --harden ${{ matrix.tt_args }}
-
-      - name: Print stats
-        run: ./tt/tt_tool.py --print-stats ${{ matrix.tt_args }}
-
-      - name: Create submission
-        run: ./tt/tt_tool.py --create-tt-submission ${{ matrix.tt_args }}
+      - name: tt gds build (${{ matrix.pdk }})
+        run: tt gds build --no-validate --no-docker
 
       # --- GL test ---
       - name: Install ${{ matrix.pdk }} PDK
         uses: TinyTapeout/ciel-action@v1
         with:
           pdk_name: ${{ matrix.pdk }}
-          pdk_version: ${{ fromJson('{
-            "sky130A": "0536d02d875c8f67dd7cca3902ac457e62f20005",
-            "ihp-sg13g2": "c4b8b4e5e7a05f375cca3815d51b3a37721fbf5c"
-            }')[matrix.pdk] }}
+          pdk_version: ${{ matrix.pdk_version }}
           pdk_root: /home/runner/pdk
 
       - name: Install custom iverilog (for GL sim)
