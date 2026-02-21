@@ -169,7 +169,7 @@ def _reinit_git(project_dir: Path):
     _git("init")
     _git("add", ".")
     result = _git(
-        "commit", "--no-gpg-sign", "-m", "Initial commit (from Tiny Tapeout template)"
+        "commit", "-m", "Initial commit (from Tiny Tapeout template)"
     )
     if result.returncode != 0:
         console.print(
