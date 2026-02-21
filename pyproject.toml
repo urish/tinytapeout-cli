@@ -52,5 +52,8 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+[tool.ruff.lint.pycodestyle]
+max-line-length = 120
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

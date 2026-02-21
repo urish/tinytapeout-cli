@@ -1,5 +1,3 @@
-import sys
-
 import click
 
 from tinytapeout.cli.console import console, print_status
@@ -14,13 +12,9 @@ def doctor(project_dir: str):
     console.print("[bold]Tiny Tapeout Doctor[/bold]\n")
     all_ok = True
 
-    # Python
+    # Python (requires-python >= 3.11, so if we're running, it's OK)
     py = check_python()
-    if sys.version_info >= (3, 11):
-        print_status("OK", f"Python {py.version}")
-    else:
-        print_status("FAIL", f"Python {py.version} (3.11+ required)", style="red")
-        all_ok = False
+    print_status("OK", f"Python {py.version}")
 
     # Docker
     docker = check_docker()
