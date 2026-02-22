@@ -130,8 +130,12 @@ def validate(project_dir: str, json_output: bool):
     """Run DRC precheck on the hardened design."""
     ctx = detect_context(project_dir)
 
-    # Find the GDS file
-    gds_files = list(ctx.gds_dir.glob("*.gds")) if ctx.gds_dir.exists() else []
+    # Find the GDS file — prefer tt_submission/ (has GL netlist alongside GDS)
+    submission_dir = ctx.project_dir / "tt_submission"
+    if submission_dir.exists():
+        gds_files = list(submission_dir.glob("*.gds"))
+    else:
+        gds_files = list(ctx.gds_dir.glob("*.gds")) if ctx.gds_dir.exists() else []
     if not gds_files:
         console.print("[red]No GDS file found. Run 'tt gds build' first.[/red]")
         sys.exit(2)
