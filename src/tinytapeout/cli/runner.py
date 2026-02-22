@@ -53,12 +53,17 @@ def run_precheck(
         )
         raise SystemExit(2)
 
+    precheck_dir = tt_dir / "precheck"
     cmd = [_tt_tools_python(tt_dir), str(precheck_script)]
     cmd.extend(["--gds", gds_path])
     cmd.extend(["--tech", ctx.tech])
     cmd.extend(args)
     return subprocess.run(
-        cmd, capture_output=capture, text=True, env=_tt_tools_env(tt_dir)
+        cmd,
+        cwd=str(precheck_dir),
+        capture_output=capture,
+        text=True,
+        env=_tt_tools_env(tt_dir),
     )
 
 
