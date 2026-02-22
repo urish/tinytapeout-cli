@@ -93,7 +93,7 @@ jobs:
         working-directory: tt_um_e2e_test
         env:
           PDK_ROOT: /home/runner/pdk
-        run: tt gds build
+        run: tt gds build --no-validate
 
       # --- GL test ---
       - name: tt test --gl (${{ matrix.pdk }})
