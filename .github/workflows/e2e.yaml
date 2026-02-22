@@ -69,6 +69,13 @@ jobs:
           show: all
 
       # --- GDS hardening (via tt CLI) ---
+      - name: Install ${{ matrix.pdk }} PDK
+        uses: TinyTapeout/ciel-action@v1
+        with:
+          pdk_name: ${{ matrix.pdk }}
+          pdk_version: ${{ matrix.pdk_version }}
+          pdk_root: /home/runner/pdk
+
       - name: Checkout tt-support-tools
         uses: actions/checkout@v4
         with:
@@ -84,16 +91,11 @@ jobs:
 
       - name: tt gds build (${{ matrix.pdk }})
         working-directory: tt_um_e2e_test
+        env:
+          PDK_ROOT: /home/runner/pdk
         run: tt gds build
 
       # --- GL test ---
-      - name: Install ${{ matrix.pdk }} PDK
-        uses: TinyTapeout/ciel-action@v1
-        with:
-          pdk_name: ${{ matrix.pdk }}
-          pdk_version: ${{ matrix.pdk_version }}
-          pdk_root: /home/runner/pdk
-
       - name: tt test --gl (${{ matrix.pdk }})
         working-directory: tt_um_e2e_test
         env:
