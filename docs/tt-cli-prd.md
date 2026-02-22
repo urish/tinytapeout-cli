@@ -765,105 +765,80 @@ The CLI must work identically in CI and locally. Key considerations:
 
 ## Implementation Phases
 
-### Phase 1: Core CLI + End-to-End Proof (MVP)
+### Phase 1: Core CLI + End-to-End Proof (MVP) ✅
 
 **Goal**: Close the loop — every command needed for the full hardening + testing flow works, proven by an E2E GitHub Actions workflow.
 
-1. Scaffold repo with pyproject.toml, package structure, README, LICENSE, CHANGELOG.md
-2. **Project hygiene from day 1**:
-   - Pre-commit hooks: ruff (replaces flake8+isort+black), mypy
-   - `.pre-commit-config.yaml` with ruff formatter + linter, mypy
-   - GitHub Actions workflows:
-     - `test.yaml`: pytest with JUnit XML + test-summary/action
-     - `lint.yaml`: `pre-commit run --all-files`
-     - `publish.yaml`: on release → build wheel → publish to PyPI (trusted publishing)
-   - Use latest action versions: `actions/checkout@v4`, `actions/setup-python@v6`, `actions/upload-artifact@v4`, `test-summary/action@v2.4`
-3. Migrate `project_info.py`, `project_checks.py`, `tech.py` + tech data files into `tinytapeout/`
-4. Migrate `test_project_info.py` tests; add tests for context detection, tech module
-5. Implement `cli/context.py` (project detection) and `cli/runner.py` (script execution)
-6. Implement CI detection: auto-detect `GITHUB_ACTIONS`/`CI` env vars, suppress Rich animations, skip update checks, write to `$GITHUB_STEP_SUMMARY` when available
-7. Implement `tt doctor` (environment checks)
-8. Implement `tt init` (interactive wizard + non-interactive flags + per-tech GitHub template cloning)
-9. Implement `tt check` (uses own library directly)
-10. Implement `tt test` with `--gl` flag (invokes make in test/; writes test results to step summary in CI)
-11. Implement `tt gds build` (delegates to tt_tool.py; writes linter/stats/cells to step summary in CI)
-12. Implement `tt gds stats` (delegates to tt_tool.py; supports `--json` for CI)
-13. Implement `tt gds validate` (delegates to precheck; writes pass/fail table to step summary in CI; supports `--json`)
-14. Rich console output (local) / clean log output (CI) throughout
-15. **End-to-end CI workflow** (`e2e.yaml`): proves the full flow works in GitHub Actions:
-    ```yaml
-    name: E2E Test
-    on: [push, pull_request]
-    jobs:
-      e2e:
-        strategy:
-          fail-fast: false
-          matrix:
-            pdk: [sky130A, ihp-sg13g2]
-        runs-on: ubuntu-24.04
-        steps:
-          - uses: actions/checkout@v4
-          - uses: actions/setup-python@v6
-            with:
-              python-version: '3.11'
-          - run: pip install -e .
-          # Init a new project (non-interactive)
-          - run: tt init --name e2e_test --type digital --tech ${{ matrix.pdk }}
-                   --language Verilog --tiles 1x1 --author "CI" --description "E2E test"
-                   --clock-hz 50000000
-          - run: cd tt_um_e2e_test && tt check
-          - run: cd tt_um_e2e_test && tt test
-          # Harden (needs PDK + LibreLane)
-          - run: cd tt_um_e2e_test && tt gds build
-          - run: cd tt_um_e2e_test && tt gds stats
-          - run: cd tt_um_e2e_test && tt gds validate
-          # GL test (needs hardened GDS)
-          - run: cd tt_um_e2e_test && tt test --gl
-    ```
-    This workflow installs the CLI, scaffolds a project via `tt init`, and runs every command through the full pipeline. PDK installation and LibreLane setup steps are included (details depend on the infra — may use `TinyTapeout/ciel-action` for PDK, pip for LibreLane). Matrix tests both sky130A and ihp-sg13g2.
+**Status: Complete.** All items below are implemented and passing in CI.
 
-### Phase 2: Viewer + Update Checker + Begin CI Migration
-16. Implement `tt gds view` subgroup: `2d` (PNG), `3d` (TT viewer in browser), `klayout` (KLayout GUI)
-17. Auto-update checking (skipped in CI)
-18. **Begin tt-gds-action migration**: tt-gds-action starts using `pip install tinytapeout-cli` alongside tt-support-tools. Gradually replace `python tt/tt_tool.py` calls with `tt` commands (both paths work in parallel).
+1. ✅ Scaffold repo with pyproject.toml, package structure, README, LICENSE, CHANGELOG.md
+2. ✅ **Project hygiene from day 1**:
+   - Pre-commit hooks: ruff formatter + linter, pre-commit-hooks (trailing-whitespace, end-of-file-fixer, check-yaml, check-toml)
+   - GitHub Actions workflows: `test.yaml`, `lint.yaml`, `publish.yaml`, `e2e.yaml`
+   - Latest action versions: `actions/checkout@v4`, `actions/setup-python@v6`, `actions/upload-artifact@v4`, `test-summary/action@v2.4`
+3. ✅ Migrate `project_info.py`, `project_checks.py`, `tech.py` + tech data files into `tinytapeout/`
+4. ✅ Migrate tests; add tests for context detection, tech module (41 tests across 5 test files)
+5. ✅ Implement `cli/context.py` (project detection, tech detection from info.yaml → `TT_PDK` → default) and `cli/runner.py` (subprocess wrappers with venv PATH)
+6. ✅ Implement CI detection: suppress Rich animations, skip update checks, `write_step_summary()` helper
+7. ✅ Implement `tt doctor` (Python, Docker, Git, iverilog version check, PDK, project detection, tt-support-tools)
+8. ✅ Implement `tt init` (interactive wizard + non-interactive flags + per-tech template cloning, writes `pdk` to info.yaml)
+9. ✅ Implement `tt check` (uses own library directly)
+10. ✅ Implement `tt test` + `--gl` (invokes make; iverilog version pre-flight check; test-summary/action in E2E)
+11. ✅ Implement `tt gds build` (delegates to tt_tool.py; writes stats to step summary)
+12. ✅ Implement `tt gds stats` (`--json` for CI)
+13. ✅ Implement `tt gds validate` (`--json` for CI; writes to step summary)
+14. ✅ Implement `tt gds view` subgroup: `2d` (PNG), `3d` (TT viewer in browser), `klayout` (KLayout GUI)
+15. ✅ Auto-update checking (24h cache, skipped in CI, 3s timeout)
+16. ✅ **End-to-end CI workflow** (`e2e.yaml`): `tt init` → `tt test` → `tt gds build` → `tt test --gl`, matrix: sky130A + ihp-sg13g2, both passing
+
+### Phase 2: Polish + Hardening-without-remote + CI Migration
+
+**Goal**: Harden the CLI for real-world usage, add missing validation, and begin migrating tt-gds-action.
+
+17. `tt check` warns if `pdk` field is missing from info.yaml: *"Consider adding 'pdk: sky130A' to info.yaml"*
+18. Add `tt check` step to E2E workflow (between init and test)
+19. **Hardening without git remote**: `tt gds build` must work immediately after `tt init`, before publishing to GitHub. Currently tt-support-tools' `project.harden()` calls `get_git_remote()` and `get_git_commit_hash()` which fail without a remote/commits. The CLI (or tt-support-tools) must handle this gracefully.
+20. Add `__main__.py` so `python -m tinytapeout` works
+21. Rich progress spinners for long operations (`tt gds build`, `tt test`)
+22. **Begin tt-gds-action migration**: tt-gds-action starts using `pip install tinytapeout-cli` alongside tt-support-tools. Gradually replace `python tt/tt_tool.py` calls with `tt` commands (both paths work in parallel).
 
 ### Phase 3: FPGA + Setup + Analog Init + Switch Tech + Full Migration
-19. Implement `tt setup <tech>` (guided PDK installation)
-20. Implement `tt fpga build` (delegates to tt_fpga.py)
-21. Implement `tt fpga upload` (delegates to tt_fpga.py)
-22. Implement `tt switch-tech <new-tech>` (modifies Makefile GL section, tb.v, workflows, devcontainer, validates tile sizes)
-23. Implement `tt init --type analog` (analog project scaffolding):
+23. Implement `tt setup <tech>` (guided PDK installation)
+24. Implement `tt fpga build` (delegates to tt_fpga.py)
+25. Implement `tt fpga upload` (delegates to tt_fpga.py)
+26. Implement `tt switch-tech <new-tech>` (modifies Makefile GL section, tb.v, workflows, devcontainer, validates tile sizes)
+27. Implement `tt init --type analog` (analog project scaffolding):
     - Clone analog template repo
     - Generate customized `magic_init_project.tcl` from tech-specific templates
     - Download appropriate DEF template (`tt_analog_{tiles}.def` or `tt_analog_{tiles}_3v3.def`)
     - Configure analog pins, power stripes, tile size in the TCL script
     - Optionally generate KLayout equivalent setup
     - Supported techs: sky130A, ihp-sg13g2 (not gf180mcuD yet)
-24. Shell completion generation
-25. **Complete tt-gds-action migration**: all user-facing operations go through `tt` CLI. tt-support-tools checkout only needed for shuttle-specific code.
-26. **Begin tt-support-tools migration**: tt-support-tools adds `tinytapeout-cli` as pip dependency and imports shared code. Backward-compat shims at root for submodule users.
+28. Shell completion generation
+29. **Complete tt-gds-action migration**: all user-facing operations go through `tt` CLI. tt-support-tools checkout only needed for shuttle-specific code.
+30. **Begin tt-support-tools migration**: tt-support-tools adds `tinytapeout-cli` as pip dependency and imports shared code. Backward-compat shims at root for submodule users.
 
 ### Phase 4: GitHub Publishing + TT App Integration
-27. Implement `tt publish` (create GitHub repo via API, push project, enable GH Pages):
+31. Implement `tt publish` (create GitHub repo via API, push project, enable GH Pages):
     - Use `gh` CLI or GitHub API with user's token
     - Create repo, push, enable Pages with "deploy from Actions" source
     - Non-interactive mode with `--repo`, `--public`, `--enable-pages` flags
-28. Implement `tt login` -- authenticate with app.tinytapeout.com (opens browser, stores token locally)
-29. Implement `tt submit` (submit project version to TT shuttle via web app API):
+32. Implement `tt login` -- authenticate with app.tinytapeout.com (opens browser, stores token locally)
+33. Implement `tt submit` (submit project version to TT shuttle via web app API):
     - Authenticate via token from app.tinytapeout.com (stored in `~/.config/tinytapeout/auth.json`)
     - Call `POST /api/projects/submit` with repo URL, commit SHA, shuttle ID
     - Stream SSE response showing submission progress
     - Display project URL and submission version on success
-30. Implement `tt submissions` (list all submitted revisions and their details):
+34. Implement `tt submissions` (list all submitted revisions and their details):
     - Fetches submission history from TT web app API
     - Displays: revision number, commit SHA, submission date, status, PR number, workflow run URL
     - Supports `--json` for machine-readable output
     - Mirrors the submissions page on app.tinytapeout.com
 
 ### Phase 5: Polish
-31. Comprehensive test suite
-32. Documentation (README, examples)
-33. Error message improvements, edge case handling
+35. Comprehensive test suite
+36. Documentation (README, examples)
+37. Error message improvements, edge case handling
 
 ---
 
