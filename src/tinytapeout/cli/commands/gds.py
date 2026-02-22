@@ -1,11 +1,40 @@
+import subprocess
 import sys
 import webbrowser
+from pathlib import Path
 
 import click
 
 from tinytapeout.cli.console import console, is_ci, write_step_summary
 from tinytapeout.cli.context import detect_context
 from tinytapeout.cli.runner import run_precheck, run_tt_tool
+
+
+def _ensure_git_remote(project_dir: Path):
+    """Add a placeholder git remote if none exists.
+
+    tt-support-tools crashes with IndexError in get_git_remote() when the repo
+    has no remotes. The remote URL only ends up in commit_id.json metadata and
+    does not affect the hardened design.
+    """
+    result = subprocess.run(
+        ["git", "remote"],
+        cwd=str(project_dir),
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 0 and not result.stdout.strip():
+        subprocess.run(
+            [
+                "git",
+                "remote",
+                "add",
+                "origin",
+                "https://github.com/placeholder/project",
+            ],
+            cwd=str(project_dir),
+            capture_output=True,
+        )
 
 
 @click.group()
@@ -33,6 +62,9 @@ def build(project_dir: str, no_docker: bool, no_validate: bool):
         sys.exit(2)
 
     console.print("[bold]Building GDS...[/bold]\n")
+
+    # Ensure git remote exists (tt-support-tools crashes without one)
+    _ensure_git_remote(ctx.project_dir)
 
     # Step 1: Create user config
     console.print("Creating user config...")

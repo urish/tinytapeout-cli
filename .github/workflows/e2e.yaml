@@ -30,6 +30,11 @@ jobs:
       - name: Install CLI
         run: pip install ./cli
 
+      - name: Install iverilog
+        run: |
+          wget -q https://github.com/TinyTapeout/iverilog/releases/download/13.0-git-d8c3c51/iverilog_13.0-git-d8c3c51a-1_amd64.deb
+          sudo dpkg -i iverilog_13.0-git-d8c3c51a-1_amd64.deb
+
       # --- tt init ---
       - name: Configure git
         run: |
@@ -46,26 +51,21 @@ jobs:
             --description "E2E test project" \
             --clock-hz 50000000 \
             --language Verilog
-          shopt -s dotglob
-          mv tt_um_e2e_test/* .
-          rmdir tt_um_e2e_test
-          git remote add origin https://github.com/TinyTapeout/tt-e2e-test
 
       # --- RTL test ---
-      - name: Install iverilog
-        run: sudo apt-get update && sudo apt-get install -y iverilog
-
       - name: Install test dependencies
+        working-directory: tt_um_e2e_test
         run: pip install -r test/requirements.txt
 
       - name: tt test (${{ matrix.pdk }})
+        working-directory: tt_um_e2e_test
         run: tt test
 
       - name: RTL Test Summary
         if: always()
         uses: test-summary/action@v2.4
         with:
-          paths: test/results.xml
+          paths: tt_um_e2e_test/test/results.xml
           show: all
 
       # --- GDS hardening (via tt CLI) ---
@@ -73,16 +73,18 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: TinyTapeout/tt-support-tools
-          path: tt
+          path: tt_um_e2e_test/tt
 
       - name: Setup tt-support-tools venv
+        working-directory: tt_um_e2e_test
         run: |
           python -m venv tt/.venv
           tt/.venv/bin/pip install -r tt/requirements.txt
           tt/.venv/bin/pip install librelane==${{ matrix.librelane_version }}
 
       - name: tt gds build (${{ matrix.pdk }})
-        run: tt gds build --no-validate
+        working-directory: tt_um_e2e_test
+        run: tt gds build
 
       # --- GL test ---
       - name: Install ${{ matrix.pdk }} PDK
@@ -92,12 +94,8 @@ jobs:
           pdk_version: ${{ matrix.pdk_version }}
           pdk_root: /home/runner/pdk
 
-      - name: Install custom iverilog (for GL sim)
-        run: |
-          wget -q https://github.com/TinyTapeout/iverilog/releases/download/13.0-git-d8c3c51/iverilog_13.0-git-d8c3c51a-1_amd64.deb
-          sudo dpkg -i iverilog_13.0-git-d8c3c51a-1_amd64.deb
-
       - name: tt test --gl (${{ matrix.pdk }})
+        working-directory: tt_um_e2e_test
         env:
           PDK_ROOT: /home/runner/pdk
         run: tt test --gl
@@ -106,7 +104,7 @@ jobs:
         if: always()
         uses: test-summary/action@v2.4
         with:
-          paths: test/results.xml
+          paths: tt_um_e2e_test/test/results.xml
           show: all
 
       - name: Upload artifacts
@@ -115,6 +113,6 @@ jobs:
         with:
           name: e2e-${{ matrix.pdk }}
           path: |
-            runs/wokwi/*
-            test/results.xml
-            test/tb.fst
+            tt_um_e2e_test/runs/wokwi/*
+            tt_um_e2e_test/test/results.xml
+            tt_um_e2e_test/test/tb.fst
