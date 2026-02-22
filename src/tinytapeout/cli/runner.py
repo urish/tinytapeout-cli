@@ -58,12 +58,14 @@ def run_precheck(
     cmd.extend(["--gds", gds_path])
     cmd.extend(["--tech", ctx.tech])
     cmd.extend(args)
+    env = _tt_tools_env(tt_dir)
+    env["PDK"] = ctx.tech  # precheck reads PDK env var at module level
     return subprocess.run(
         cmd,
         cwd=str(precheck_dir),
         capture_output=capture,
         text=True,
-        env=_tt_tools_env(tt_dir),
+        env=env,
     )
 
 
