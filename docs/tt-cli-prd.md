@@ -44,13 +44,19 @@ These modules have minimal dependencies (PyYAML, stdlib) and are needed by many 
 | `tech.py` | 285 | json, os (stdlib) | PDK constants needed everywhere; no heavy deps |
 | tile_sizes YAML + cells.json | ~50 | - | Referenced by project_info for validation |
 
+### What the CLI handles directly (absorbed from tt-support-tools)
+
+| Operation | Module | Notes |
+|-----------|--------|-------|
+| **Hardening** | `cli/harden.py` | Calls `python -m librelane` directly. Git metadata via plain `git` subprocess (no GitPython). Config merging, `commit_id.json`, `pdk.json` writing. |
+
 ### What stays in tt-support-tools (delegated via subprocess)
 
-These have heavy dependencies (klayout, gdstk, LibreLane, CairoSVG) that we don't want in `tinytapeout`:
+These have heavy dependencies (klayout, gdstk, CairoSVG) or complex logic we don't need to absorb yet:
 
 | Module | Heavy Deps | CLI delegates via |
 |--------|-----------|-------------------|
-| `project.py` (hardening, rendering) | klayout, gdstk, LibreLane, CairoSVG, GitPython | `python tt/tt_tool.py --harden` |
+| `project.py` (user config, stats, submission) | klayout, gdstk, CairoSVG, GitPython | `python tt/tt_tool.py --create-user-config` etc. |
 | `precheck/` | klayout, gdstk, Magic | `python tt/precheck/precheck.py --gds ...` |
 | `render_utils.py` | gdstk, CairoSVG | `python tt/tt_tool.py --create-png` |
 | `tt_fpga.py` | yowasp-yosys, mpremote | `python tt/tt_fpga.py harden` |
@@ -288,17 +294,19 @@ def test(gl):
 ```
 
 ### `tt gds build`
-Hardens the project. Delegates to tt-support-tools via subprocess.
+Hardens the project (build-only, no validation). The hardening step calls LibreLane directly via the CLI's own `harden.py` module — no longer delegated to `tt_tool.py --harden`. Other steps (user config, stats, submission) still delegate to tt-support-tools.
 
 ```python
 # Step 1: python tt/tt_tool.py --create-user-config [--ihp|--gf]
-# Step 2: python tt/tt_tool.py --harden [--no-docker] [--ihp|--gf]
-# Step 3 (unless --no-validate): python tt/precheck/precheck.py --gds <gds_path>
+# Step 2: run_harden(ctx) — calls `python -m librelane` directly
+# Step 3: python tt/tt_tool.py --print-warnings / --print-stats
 # Step 4: python tt/tt_tool.py --create-tt-submission [--ihp|--gf]
 # CLI adds: Rich progress spinner, elapsed time, formatted errors, summary
 ```
 
-**Requirement: hardening must work without a git remote.** Users should be able to run `tt gds build` immediately after `tt init`, before publishing to GitHub. Currently tt-support-tools' `project.harden()` calls `get_git_remote()` and `get_git_commit_hash()` which fail if the repo has no remote or no commits. The CLI (or tt-support-tools) must handle this gracefully — using a placeholder remote URL and/or commit hash when git metadata is unavailable.
+**Hardening works without a git remote.** The CLI adds a placeholder remote if none exists, and falls back gracefully for git metadata (remote URL, commit hash) — these only affect `commit_id.json` metadata, not the hardened design.
+
+**Validation is separate.** Run `tt gds validate` after building to run DRC precheck. This is intentionally decoupled because digital projects produce valid GDS from hardening; precheck is more relevant for analog/mixed-signal designs where users may go through a different flow.
 
 ### `tt gds stats`
 ```python
@@ -709,8 +717,8 @@ GitHub Actions: on release → build wheel → publish to PyPI via trusted publi
 
 | Action | Current invocation | CLI equivalent |
 |--------|-------------------|----------------|
-| Main (harden) | `python tt/tt_tool.py --create-user-config && --harden` | `tt gds build` |
-| Precheck | `python tt/precheck/precheck.py --gds ... --tech ...` | `tt gds validate` |
+| Main (harden) | `python tt/tt_tool.py --create-user-config && --harden` | `tt gds build` (calls LibreLane directly) |
+| Precheck | `python tt/precheck/precheck.py --gds ... --tech ...` | `tt gds validate` (separate step, requires Nix for klayout/magic) |
 | GL Test | `cd test && GATES=yes make` | `tt test --gl` |
 | EQY Test | `eqy -f equivalence.eqy` | Future: `tt test --eqy` |
 | Docs | `python tt/tt_tool.py --check-docs && --create-pdf` | `tt check` + future `tt docs` |
@@ -784,12 +792,12 @@ The CLI must work identically in CI and locally. Key considerations:
 8. ✅ Implement `tt init` (interactive wizard + non-interactive flags + per-tech template cloning, writes `pdk` to info.yaml)
 9. ✅ Implement `tt check` (uses own library directly)
 10. ✅ Implement `tt test` + `--gl` (invokes make; iverilog version pre-flight check; test-summary/action in E2E)
-11. ✅ Implement `tt gds build` (delegates to tt_tool.py; writes stats to step summary)
+11. ✅ Implement `tt gds build` (calls LibreLane directly via `harden.py`; writes stats to step summary)
 12. ✅ Implement `tt gds stats` (`--json` for CI)
-13. ✅ Implement `tt gds validate` (`--json` for CI; writes to step summary)
+13. ✅ Implement `tt gds validate` (`--json` for CI; writes to step summary; separate from build)
 14. ✅ Implement `tt gds view` subgroup: `2d` (PNG), `3d` (TT viewer in browser), `klayout` (KLayout GUI)
 15. ✅ Auto-update checking (24h cache, skipped in CI, 3s timeout)
-16. ✅ **End-to-end CI workflow** (`e2e.yaml`): `tt init` → `tt test` → `tt gds build` → `tt test --gl`, matrix: sky130A + ihp-sg13g2, both passing
+16. ✅ **End-to-end CI workflow** (`e2e.yaml`): `tt init` → `tt test` → `tt gds build` → `tt test --gl` → `tt gds validate` (via Nix), matrix: sky130A + ihp-sg13g2, both passing
 
 ### Phase 2: Polish + Hardening-without-remote + CI Migration
 
@@ -797,7 +805,7 @@ The CLI must work identically in CI and locally. Key considerations:
 
 17. `tt check` warns if `pdk` field is missing from info.yaml: *"Consider adding 'pdk: sky130A' to info.yaml"*
 18. Add `tt check` step to E2E workflow (between init and test)
-19. **Hardening without git remote**: `tt gds build` must work immediately after `tt init`, before publishing to GitHub. Currently tt-support-tools' `project.harden()` calls `get_git_remote()` and `get_git_commit_hash()` which fail without a remote/commits. The CLI (or tt-support-tools) must handle this gracefully.
+19. ✅ **Hardening without git remote**: `tt gds build` works immediately after `tt init` — the CLI adds a placeholder git remote if none exists, and `harden.py` falls back gracefully for git metadata (only affects `commit_id.json`, not the design).
 20. Add `__main__.py` so `python -m tinytapeout` works
 21. Rich progress spinners for long operations (`tt gds build`, `tt test`)
 22. **Begin tt-gds-action migration**: tt-gds-action starts using `pip install tinytapeout-cli` alongside tt-support-tools. Gradually replace `python tt/tt_tool.py` calls with `tt` commands (both paths work in parallel).

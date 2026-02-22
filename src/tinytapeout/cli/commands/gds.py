@@ -47,13 +47,11 @@ def gds():
 @gds.command()
 @click.option("--project-dir", default=".", help="Project directory.")
 @click.option("--no-docker", is_flag=True, help="Do not use Docker for LibreLane.")
-@click.option(
-    "--no-validate",
-    is_flag=True,
-    help="Skip precheck validation after hardening.",
-)
-def build(project_dir: str, no_docker: bool, no_validate: bool):
-    """Harden the project (generate GDS)."""
+def build(project_dir: str, no_docker: bool):
+    """Harden the project (generate GDS).
+
+    To validate the output, run 'tt gds validate' separately.
+    """
     ctx = detect_context(project_dir)
 
     if not ctx.info_yaml_path.exists():
@@ -92,19 +90,7 @@ def build(project_dir: str, no_docker: bool, no_validate: bool):
         if is_ci():
             write_step_summary(f"## GDS Build Stats\n\n{result.stdout}")
 
-    # Step 4: Validate (unless skipped)
-    if not no_validate:
-        # Find the GDS file
-        gds_files = list(ctx.gds_dir.glob("*.gds")) if ctx.gds_dir.exists() else []
-        if gds_files:
-            console.print("Running precheck validation...")
-            result = run_precheck(ctx, str(gds_files[0]))
-            if result.returncode != 0:
-                console.print("[red]Precheck validation failed.[/red]")
-                sys.exit(1)
-            console.print("[green]Precheck validation passed.[/green]")
-
-    # Step 5: Create submission
+    # Step 4: Create submission
     console.print("Creating submission...")
     result = run_tt_tool(ctx, "--create-tt-submission")
     if result.returncode != 0:

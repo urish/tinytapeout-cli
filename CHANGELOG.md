@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `tt test --gl` command for gate-level simulation tests
 - iverilog version checking in `tt doctor` and `tt test` (warns if < 13.0 for GL sim)
 - Writes `pdk` field to info.yaml during `tt init` (single source of truth for tech detection)
+- `tt gds build` now calls LibreLane directly (no longer delegates to `tt_tool.py --harden`)
+- `tt gds validate` passes `--tech` to precheck for explicit PDK detection
+
+### Changed
+
+- `tt gds build` is now build-only (no inline validation); run `tt gds validate` separately for DRC precheck
 
 ## [0.1.0] - 2026-02-20
 

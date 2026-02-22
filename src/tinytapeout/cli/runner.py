@@ -55,6 +55,7 @@ def run_precheck(
 
     cmd = [_tt_tools_python(tt_dir), str(precheck_script)]
     cmd.extend(["--gds", gds_path])
+    cmd.extend(["--tech", ctx.tech])
     cmd.extend(args)
     return subprocess.run(
         cmd, capture_output=capture, text=True, env=_tt_tools_env(tt_dir)

@@ -93,7 +93,7 @@ jobs:
         working-directory: tt_um_e2e_test
         env:
           PDK_ROOT: /home/runner/pdk
-        run: tt gds build --no-validate
+        run: tt gds build
 
       # --- GL test ---
       - name: tt test --gl (${{ matrix.pdk }})
@@ -108,6 +108,27 @@ jobs:
         with:
           paths: tt_um_e2e_test/test/results.xml
           show: all
+
+      # --- Precheck (DRC validation) ---
+      - name: Install precheck dependencies
+        working-directory: tt_um_e2e_test
+        run: tt/.venv/bin/pip install -r tt/precheck/requirements.txt
+
+      - name: Install Nix
+        uses: rikhuijzer/cache-install@v1.1.4
+        with:
+          key: nix-${{ hashFiles('tt_um_e2e_test/tt/precheck/default.nix') }}
+          nix_file: tt_um_e2e_test/tt/precheck/default.nix
+
+      - name: Build Nix packages
+        working-directory: tt_um_e2e_test/tt/precheck
+        run: nix-build
+
+      - name: tt gds validate (${{ matrix.pdk }})
+        working-directory: tt_um_e2e_test
+        env:
+          PDK_ROOT: /home/runner/pdk
+        run: nix-shell tt/precheck/default.nix --run "tt gds validate"
 
       - name: Upload artifacts
         if: always()
