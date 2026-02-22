@@ -7,6 +7,7 @@ import click
 
 from tinytapeout.cli.console import console, is_ci, write_step_summary
 from tinytapeout.cli.context import detect_context
+from tinytapeout.cli.harden import run_harden
 from tinytapeout.cli.runner import run_precheck, run_tt_tool
 
 
@@ -73,13 +74,11 @@ def build(project_dir: str, no_docker: bool, no_validate: bool):
         console.print("[red]Failed to create user config.[/red]")
         sys.exit(1)
 
-    # Step 2: Harden
+    # Step 2: Harden (calls LibreLane directly)
     console.print("Hardening design...")
-    harden_args = ["--harden"]
-    if no_docker:
-        harden_args.append("--no-docker")
-    result = run_tt_tool(ctx, *harden_args)
-    if result.returncode != 0:
+    try:
+        run_harden(ctx, no_docker=no_docker)
+    except SystemExit:
         console.print("[red]Hardening failed.[/red]")
         sys.exit(1)
 
