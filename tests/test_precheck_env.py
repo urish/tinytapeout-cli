@@ -97,7 +97,8 @@ def _setup_tt_dir(tmp_path, with_nix_file=True, tool_versions=_DEFAULT_TOOL_VERS
 
 class TestDetectPrecheckEnv:
     def test_auto_prefers_nix(self, tmp_path):
-        tt_dir = _setup_tt_dir(tmp_path)
+        # tool-versions.json not needed when nix is available
+        tt_dir = _setup_tt_dir(tmp_path, tool_versions=None)
         with (
             patch(
                 "tinytapeout.cli.precheck_env.check_nix", return_value=_nix_available()

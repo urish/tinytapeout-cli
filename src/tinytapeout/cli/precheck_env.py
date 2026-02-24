@@ -56,7 +56,6 @@ def detect_precheck_env(tt_dir: Path, requested: str = "auto") -> PrecheckEnv:
     from tinytapeout.cli.console import console
 
     nix_file = tt_dir / "precheck" / "default.nix"
-    versions = load_tool_versions(tt_dir)
 
     if requested == "auto":
         # 1. Prefer Nix
@@ -65,6 +64,7 @@ def detect_precheck_env(tt_dir: Path, requested: str = "auto") -> PrecheckEnv:
             return PrecheckEnv(runner=RUNNER_NIX, nix_file=nix_file)
 
         # 2. Try native with version check
+        versions = load_tool_versions(tt_dir)
         klayout = check_klayout()
         magic = check_magic()
         if (
@@ -93,6 +93,7 @@ def detect_precheck_env(tt_dir: Path, requested: str = "auto") -> PrecheckEnv:
         return PrecheckEnv(runner=RUNNER_NIX, nix_file=nix_file)
 
     elif requested == RUNNER_NATIVE:
+        versions = load_tool_versions(tt_dir)
         klayout = check_klayout()
         magic = check_magic()
         errors = []
