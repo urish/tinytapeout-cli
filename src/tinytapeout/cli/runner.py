@@ -34,13 +34,51 @@ def run_tt_tool(
     )
 
 
+def _install_precheck_deps(tt_dir: Path) -> None:
+    """Install precheck Python dependencies into the tt-support-tools venv."""
+    from tinytapeout.cli.console import console
+
+    req_file = tt_dir / "precheck" / "requirements.txt"
+    if not req_file.exists():
+        return
+
+    venv_python = tt_dir / ".venv" / "bin" / "python"
+    if not venv_python.exists():
+        return
+
+    # Fast path: check if deps are already satisfied
+    result = subprocess.run(
+        [str(venv_python), "-m", "pip", "install", "--dry-run", "-r", str(req_file)],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 0 and "Would install" not in result.stdout:
+        return
+
+    console.print("Installing precheck dependencies ...")
+    result = subprocess.run(
+        [str(venv_python), "-m", "pip", "install", "-r", str(req_file)],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        console.print(
+            f"[red]Failed to install precheck dependencies:[/red]\n{result.stderr}"
+        )
+        raise SystemExit(2)
+    console.print("Done.\n")
+
+
 def run_precheck(
     ctx: ProjectContext,
     gds_path: str,
     *args: str,
+    runner: str = "auto",
     capture: bool = False,
 ) -> subprocess.CompletedProcess:
     """Run precheck.py with the given arguments."""
+    from tinytapeout.cli.precheck_env import detect_precheck_env, wrap_command
+
     tt_dir = ctx.require_tt_tools()
 
     precheck_script = tt_dir / "precheck" / "precheck.py"
@@ -53,11 +91,21 @@ def run_precheck(
         )
         raise SystemExit(2)
 
+    # Install precheck Python deps into the venv
+    _install_precheck_deps(tt_dir)
+
+    # Detect execution environment
+    env_info = detect_precheck_env(tt_dir, runner)
+
     precheck_dir = tt_dir / "precheck"
     cmd = [_tt_tools_python(tt_dir), str(precheck_script)]
     cmd.extend(["--gds", gds_path])
     cmd.extend(["--tech", ctx.tech])
     cmd.extend(args)
+
+    # Wrap command for the detected environment (e.g. nix-shell)
+    cmd = wrap_command(env_info, cmd)
+
     env = _tt_tools_env(tt_dir)
     env["PDK"] = ctx.tech  # precheck reads PDK env var at module level
     return subprocess.run(

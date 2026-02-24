@@ -110,10 +110,6 @@ jobs:
           show: all
 
       # --- Precheck (DRC validation) ---
-      - name: Install precheck dependencies
-        working-directory: tt_um_e2e_test
-        run: tt/.venv/bin/pip install -r tt/precheck/requirements.txt
-
       - name: Install Nix
         uses: rikhuijzer/cache-install@v1.1.4
         with:
@@ -128,7 +124,7 @@ jobs:
         working-directory: tt_um_e2e_test
         env:
           PDK_ROOT: /home/runner/pdk
-        run: nix-shell tt/precheck/default.nix --run "tt gds validate"
+        run: tt gds validate
 
       - name: Upload artifacts
         if: always()

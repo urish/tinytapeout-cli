@@ -89,6 +89,66 @@ def check_pdk() -> ToolInfo:
     return ToolInfo(name="PDK", available=False, path=pdk_root)
 
 
+def check_nix() -> ToolInfo:
+    path = shutil.which("nix-shell")
+    if not path:
+        return ToolInfo(name="nix-shell", available=False)
+    try:
+        result = subprocess.run(
+            ["nix-shell", "--version"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        version = result.stdout.strip().removeprefix("nix-shell (Nix) ")
+        return ToolInfo(name="nix-shell", available=True, version=version, path=path)
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return ToolInfo(name="nix-shell", available=False, path=path)
+
+
+def check_klayout() -> ToolInfo:
+    path = shutil.which("klayout")
+    if not path:
+        return ToolInfo(name="klayout", available=False)
+    try:
+        result = subprocess.run(
+            ["klayout", "-v"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        # Output: "KLayout 0.29.4"
+        version = result.stdout.strip().removeprefix("KLayout ")
+        return ToolInfo(name="klayout", available=True, version=version, path=path)
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return ToolInfo(name="klayout", available=False, path=path)
+
+
+def check_magic() -> ToolInfo:
+    import re
+
+    path = shutil.which("magic")
+    if not path:
+        return ToolInfo(name="magic", available=False)
+    try:
+        result = subprocess.run(
+            ["magic", "--version"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        # Output: "Magic 8.3 revision 489" → "8.3.489"
+        text = result.stdout.strip()
+        match = re.match(r"Magic\s+(\d+\.\d+)\s+revision\s+(\d+)", text)
+        if match:
+            version = f"{match.group(1)}.{match.group(2)}"
+        else:
+            version = text.removeprefix("Magic ")
+        return ToolInfo(name="magic", available=True, version=version, path=path)
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return ToolInfo(name="magic", available=False, path=path)
+
+
 def check_iverilog() -> ToolInfo:
     path = shutil.which("iverilog")
     if not path:

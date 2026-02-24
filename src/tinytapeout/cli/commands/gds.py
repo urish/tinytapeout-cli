@@ -126,7 +126,13 @@ def stats(project_dir: str, json_output: bool):
 @gds.command()
 @click.option("--project-dir", default=".", help="Project directory.")
 @click.option("--json", "json_output", is_flag=True, help="Output as JSON.")
-def validate(project_dir: str, json_output: bool):
+@click.option(
+    "--runner",
+    type=click.Choice(["auto", "native", "nix", "docker"]),
+    default="auto",
+    help="How to run precheck tools (default: auto-detect).",
+)
+def validate(project_dir: str, json_output: bool, runner: str):
     """Run DRC precheck on the hardened design."""
     ctx = detect_context(project_dir)
 
@@ -142,7 +148,7 @@ def validate(project_dir: str, json_output: bool):
 
     console.print("[bold]Running precheck validation...[/bold]\n")
 
-    result = run_precheck(ctx, str(gds_files[0]), capture=json_output)
+    result = run_precheck(ctx, str(gds_files[0]), runner=runner, capture=json_output)
 
     if json_output and result.stdout:
         console.print(result.stdout)
