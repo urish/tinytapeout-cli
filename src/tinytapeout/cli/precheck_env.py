@@ -10,8 +10,8 @@ from packaging.version import Version
 from tinytapeout.cli.environment import check_klayout, check_magic, check_nix
 
 # Fallback minimums (used when tool-versions.json is missing)
-_FALLBACK_MIN_KLAYOUT = "0.28.17"
-_FALLBACK_MIN_MAGIC = "8.3.460"
+_FALLBACK_MIN_KLAYOUT = "0.30.4"
+_FALLBACK_MIN_MAGIC = "8.3.568"
 
 RUNNER_NATIVE = "native"
 RUNNER_NIX = "nix"

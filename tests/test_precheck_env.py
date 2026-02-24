@@ -28,8 +28,8 @@ class TestLoadToolVersions:
 
     def test_falls_back_when_missing(self, tmp_path):
         result = load_tool_versions(tmp_path)
-        assert result.klayout == "0.28.17"
-        assert result.magic == "8.3.460"
+        assert result.klayout == "0.30.4"
+        assert result.magic == "8.3.568"
 
     def test_partial_file_uses_fallback_for_missing_keys(self, tmp_path):
         precheck_dir = tmp_path / "precheck"
@@ -39,7 +39,7 @@ class TestLoadToolVersions:
         )
         result = load_tool_versions(tmp_path)
         assert result.klayout == "0.30.0"
-        assert result.magic == "8.3.460"
+        assert result.magic == "8.3.568"
 
 
 class TestVersionOk:
@@ -72,7 +72,7 @@ def _nix_unavailable():
     return ToolInfo(name="nix-shell", available=False)
 
 
-def _klayout_available(version="0.29.4"):
+def _klayout_available(version="0.30.4"):
     return ToolInfo(
         name="klayout", available=True, version=version, path="/usr/bin/klayout"
     )
@@ -82,7 +82,7 @@ def _klayout_unavailable():
     return ToolInfo(name="klayout", available=False)
 
 
-def _magic_available(version="8.3.489"):
+def _magic_available(version="8.3.568"):
     return ToolInfo(
         name="magic", available=True, version=version, path="/usr/bin/magic"
     )
