@@ -103,7 +103,9 @@ def detect_precheck_env(tt_dir: Path, requested: str = "auto") -> PrecheckEnv:
         if not klayout.available:
             errors.append(f"klayout not found (need >= {versions.klayout})")
         elif not _version_ok(klayout.version, versions.klayout):
-            errors.append(f"klayout {klayout.version} too old (need >= {versions.klayout})")
+            errors.append(
+                f"klayout {klayout.version} too old (need >= {versions.klayout})"
+            )
         if not magic.available:
             errors.append(f"magic not found (need >= {versions.magic})")
         elif not _version_ok(magic.version, versions.magic):

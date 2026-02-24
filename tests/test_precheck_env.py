@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -9,7 +8,6 @@ from tinytapeout.cli.precheck_env import (
     RUNNER_NATIVE,
     RUNNER_NIX,
     PrecheckEnv,
-    ToolVersions,
     _version_ok,
     detect_precheck_env,
     load_tool_versions,
@@ -36,7 +34,9 @@ class TestLoadToolVersions:
     def test_partial_file_uses_fallback_for_missing_keys(self, tmp_path):
         precheck_dir = tmp_path / "precheck"
         precheck_dir.mkdir()
-        (precheck_dir / "tool-versions.json").write_text(json.dumps({"klayout": "0.30.0"}))
+        (precheck_dir / "tool-versions.json").write_text(
+            json.dumps({"klayout": "0.30.0"})
+        )
         result = load_tool_versions(tmp_path)
         assert result.klayout == "0.30.0"
         assert result.magic == "8.3.460"
@@ -63,7 +63,9 @@ class TestVersionOk:
 
 
 def _nix_available():
-    return ToolInfo(name="nix-shell", available=True, version="2.18.1", path="/usr/bin/nix-shell")
+    return ToolInfo(
+        name="nix-shell", available=True, version="2.18.1", path="/usr/bin/nix-shell"
+    )
 
 
 def _nix_unavailable():
@@ -71,7 +73,9 @@ def _nix_unavailable():
 
 
 def _klayout_available(version="0.29.4"):
-    return ToolInfo(name="klayout", available=True, version=version, path="/usr/bin/klayout")
+    return ToolInfo(
+        name="klayout", available=True, version=version, path="/usr/bin/klayout"
+    )
 
 
 def _klayout_unavailable():
@@ -79,7 +83,9 @@ def _klayout_unavailable():
 
 
 def _magic_available(version="8.3.489"):
-    return ToolInfo(name="magic", available=True, version=version, path="/usr/bin/magic")
+    return ToolInfo(
+        name="magic", available=True, version=version, path="/usr/bin/magic"
+    )
 
 
 def _magic_unavailable():
@@ -101,7 +107,9 @@ class TestDetectPrecheckEnv:
     def test_auto_prefers_nix(self, tmp_path):
         tt_dir = _setup_tt_dir(tmp_path)
         with (
-            patch("tinytapeout.cli.precheck_env.check_nix", return_value=_nix_available()),
+            patch(
+                "tinytapeout.cli.precheck_env.check_nix", return_value=_nix_available()
+            ),
         ):
             result = detect_precheck_env(tt_dir, "auto")
         assert result.runner == RUNNER_NIX
@@ -110,9 +118,18 @@ class TestDetectPrecheckEnv:
     def test_auto_falls_back_to_native(self, tmp_path):
         tt_dir = _setup_tt_dir(tmp_path)
         with (
-            patch("tinytapeout.cli.precheck_env.check_nix", return_value=_nix_unavailable()),
-            patch("tinytapeout.cli.precheck_env.check_klayout", return_value=_klayout_available()),
-            patch("tinytapeout.cli.precheck_env.check_magic", return_value=_magic_available()),
+            patch(
+                "tinytapeout.cli.precheck_env.check_nix",
+                return_value=_nix_unavailable(),
+            ),
+            patch(
+                "tinytapeout.cli.precheck_env.check_klayout",
+                return_value=_klayout_available(),
+            ),
+            patch(
+                "tinytapeout.cli.precheck_env.check_magic",
+                return_value=_magic_available(),
+            ),
         ):
             result = detect_precheck_env(tt_dir, "auto")
         assert result.runner == RUNNER_NATIVE
@@ -120,19 +137,39 @@ class TestDetectPrecheckEnv:
     def test_auto_errors_when_nothing_available(self, tmp_path):
         tt_dir = _setup_tt_dir(tmp_path)
         with (
-            patch("tinytapeout.cli.precheck_env.check_nix", return_value=_nix_unavailable()),
-            patch("tinytapeout.cli.precheck_env.check_klayout", return_value=_klayout_unavailable()),
-            patch("tinytapeout.cli.precheck_env.check_magic", return_value=_magic_unavailable()),
+            patch(
+                "tinytapeout.cli.precheck_env.check_nix",
+                return_value=_nix_unavailable(),
+            ),
+            patch(
+                "tinytapeout.cli.precheck_env.check_klayout",
+                return_value=_klayout_unavailable(),
+            ),
+            patch(
+                "tinytapeout.cli.precheck_env.check_magic",
+                return_value=_magic_unavailable(),
+            ),
             pytest.raises(SystemExit),
         ):
             detect_precheck_env(tt_dir, "auto")
 
     def test_auto_errors_when_native_too_old(self, tmp_path):
-        tt_dir = _setup_tt_dir(tmp_path, tool_versions={"klayout": "0.29.0", "magic": "8.3.500"})
+        tt_dir = _setup_tt_dir(
+            tmp_path, tool_versions={"klayout": "0.29.0", "magic": "8.3.500"}
+        )
         with (
-            patch("tinytapeout.cli.precheck_env.check_nix", return_value=_nix_unavailable()),
-            patch("tinytapeout.cli.precheck_env.check_klayout", return_value=_klayout_available("0.28.0")),
-            patch("tinytapeout.cli.precheck_env.check_magic", return_value=_magic_available("8.3.400")),
+            patch(
+                "tinytapeout.cli.precheck_env.check_nix",
+                return_value=_nix_unavailable(),
+            ),
+            patch(
+                "tinytapeout.cli.precheck_env.check_klayout",
+                return_value=_klayout_available("0.28.0"),
+            ),
+            patch(
+                "tinytapeout.cli.precheck_env.check_magic",
+                return_value=_magic_available("8.3.400"),
+            ),
             pytest.raises(SystemExit),
         ):
             detect_precheck_env(tt_dir, "auto")
@@ -140,23 +177,36 @@ class TestDetectPrecheckEnv:
     def test_auto_nix_without_nix_file_skips_nix(self, tmp_path):
         tt_dir = _setup_tt_dir(tmp_path, with_nix_file=False)
         with (
-            patch("tinytapeout.cli.precheck_env.check_nix", return_value=_nix_available()),
-            patch("tinytapeout.cli.precheck_env.check_klayout", return_value=_klayout_available()),
-            patch("tinytapeout.cli.precheck_env.check_magic", return_value=_magic_available()),
+            patch(
+                "tinytapeout.cli.precheck_env.check_nix", return_value=_nix_available()
+            ),
+            patch(
+                "tinytapeout.cli.precheck_env.check_klayout",
+                return_value=_klayout_available(),
+            ),
+            patch(
+                "tinytapeout.cli.precheck_env.check_magic",
+                return_value=_magic_available(),
+            ),
         ):
             result = detect_precheck_env(tt_dir, "auto")
         assert result.runner == RUNNER_NATIVE
 
     def test_explicit_nix(self, tmp_path):
         tt_dir = _setup_tt_dir(tmp_path)
-        with patch("tinytapeout.cli.precheck_env.check_nix", return_value=_nix_available()):
+        with patch(
+            "tinytapeout.cli.precheck_env.check_nix", return_value=_nix_available()
+        ):
             result = detect_precheck_env(tt_dir, "nix")
         assert result.runner == RUNNER_NIX
 
     def test_explicit_nix_errors_when_unavailable(self, tmp_path):
         tt_dir = _setup_tt_dir(tmp_path)
         with (
-            patch("tinytapeout.cli.precheck_env.check_nix", return_value=_nix_unavailable()),
+            patch(
+                "tinytapeout.cli.precheck_env.check_nix",
+                return_value=_nix_unavailable(),
+            ),
             pytest.raises(SystemExit),
         ):
             detect_precheck_env(tt_dir, "nix")
@@ -164,8 +214,14 @@ class TestDetectPrecheckEnv:
     def test_explicit_native(self, tmp_path):
         tt_dir = _setup_tt_dir(tmp_path)
         with (
-            patch("tinytapeout.cli.precheck_env.check_klayout", return_value=_klayout_available()),
-            patch("tinytapeout.cli.precheck_env.check_magic", return_value=_magic_available()),
+            patch(
+                "tinytapeout.cli.precheck_env.check_klayout",
+                return_value=_klayout_available(),
+            ),
+            patch(
+                "tinytapeout.cli.precheck_env.check_magic",
+                return_value=_magic_available(),
+            ),
         ):
             result = detect_precheck_env(tt_dir, "native")
         assert result.runner == RUNNER_NATIVE
@@ -173,17 +229,31 @@ class TestDetectPrecheckEnv:
     def test_explicit_native_errors_when_missing(self, tmp_path):
         tt_dir = _setup_tt_dir(tmp_path)
         with (
-            patch("tinytapeout.cli.precheck_env.check_klayout", return_value=_klayout_unavailable()),
-            patch("tinytapeout.cli.precheck_env.check_magic", return_value=_magic_available()),
+            patch(
+                "tinytapeout.cli.precheck_env.check_klayout",
+                return_value=_klayout_unavailable(),
+            ),
+            patch(
+                "tinytapeout.cli.precheck_env.check_magic",
+                return_value=_magic_available(),
+            ),
             pytest.raises(SystemExit),
         ):
             detect_precheck_env(tt_dir, "native")
 
     def test_explicit_native_errors_when_too_old(self, tmp_path):
-        tt_dir = _setup_tt_dir(tmp_path, tool_versions={"klayout": "0.29.0", "magic": "8.3.500"})
+        tt_dir = _setup_tt_dir(
+            tmp_path, tool_versions={"klayout": "0.29.0", "magic": "8.3.500"}
+        )
         with (
-            patch("tinytapeout.cli.precheck_env.check_klayout", return_value=_klayout_available("0.28.0")),
-            patch("tinytapeout.cli.precheck_env.check_magic", return_value=_magic_available("8.3.489")),
+            patch(
+                "tinytapeout.cli.precheck_env.check_klayout",
+                return_value=_klayout_available("0.28.0"),
+            ),
+            patch(
+                "tinytapeout.cli.precheck_env.check_magic",
+                return_value=_magic_available("8.3.489"),
+            ),
             pytest.raises(SystemExit),
         ):
             detect_precheck_env(tt_dir, "native")
@@ -211,4 +281,7 @@ class TestWrapCommand:
         cmd = ["/venv/bin/python", "precheck.py", "--gds", "/path with spaces/test.gds"]
         result = wrap_command(env, cmd)
         # shlex.join should quote the path with spaces
-        assert "'/path with spaces/test.gds'" in result[3] or '"/path with spaces/test.gds"' in result[3]
+        assert (
+            "'/path with spaces/test.gds'" in result[3]
+            or '"/path with spaces/test.gds"' in result[3]
+        )
