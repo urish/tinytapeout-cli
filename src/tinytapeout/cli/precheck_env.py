@@ -9,10 +9,6 @@ from packaging.version import Version
 
 from tinytapeout.cli.environment import check_klayout, check_magic, check_nix
 
-# Fallback minimums (used when tool-versions.json is missing)
-_FALLBACK_MIN_KLAYOUT = "0.30.4"
-_FALLBACK_MIN_MAGIC = "8.3.568"
-
 RUNNER_NATIVE = "native"
 RUNNER_NIX = "nix"
 RUNNER_DOCKER = "docker"
@@ -31,15 +27,15 @@ class PrecheckEnv:
 
 
 def load_tool_versions(tt_dir: Path) -> ToolVersions:
-    """Load minimum tool versions from tt/precheck/tool-versions.json, with fallbacks."""
+    """Load minimum tool versions from tt/precheck/tool-versions.json."""
     versions_file = tt_dir / "precheck" / "tool-versions.json"
-    if versions_file.exists():
-        data = json.loads(versions_file.read_text())
-        return ToolVersions(
-            klayout=data.get("klayout", _FALLBACK_MIN_KLAYOUT),
-            magic=data.get("magic", _FALLBACK_MIN_MAGIC),
+    if not versions_file.exists():
+        raise FileNotFoundError(
+            f"Tool versions file not found: {versions_file}\n"
+            "Try updating tt-support-tools: git -C tt pull"
         )
-    return ToolVersions(klayout=_FALLBACK_MIN_KLAYOUT, magic=_FALLBACK_MIN_MAGIC)
+    data = json.loads(versions_file.read_text())
+    return ToolVersions(klayout=data["klayout"], magic=data["magic"])
 
 
 def _version_ok(actual: str | None, minimum: str) -> bool:

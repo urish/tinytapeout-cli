@@ -26,20 +26,9 @@ class TestLoadToolVersions:
         assert result.klayout == "0.29.0"
         assert result.magic == "8.3.500"
 
-    def test_falls_back_when_missing(self, tmp_path):
-        result = load_tool_versions(tmp_path)
-        assert result.klayout == "0.30.4"
-        assert result.magic == "8.3.568"
-
-    def test_partial_file_uses_fallback_for_missing_keys(self, tmp_path):
-        precheck_dir = tmp_path / "precheck"
-        precheck_dir.mkdir()
-        (precheck_dir / "tool-versions.json").write_text(
-            json.dumps({"klayout": "0.30.0"})
-        )
-        result = load_tool_versions(tmp_path)
-        assert result.klayout == "0.30.0"
-        assert result.magic == "8.3.568"
+    def test_errors_when_missing(self, tmp_path):
+        with pytest.raises(FileNotFoundError, match="tool-versions.json"):
+            load_tool_versions(tmp_path)
 
 
 class TestVersionOk:
@@ -92,13 +81,16 @@ def _magic_unavailable():
     return ToolInfo(name="magic", available=False)
 
 
-def _setup_tt_dir(tmp_path, with_nix_file=True, tool_versions=None):
+_DEFAULT_TOOL_VERSIONS = {"klayout": "0.30.4", "magic": "8.3.568"}
+
+
+def _setup_tt_dir(tmp_path, with_nix_file=True, tool_versions=_DEFAULT_TOOL_VERSIONS):
     """Create a minimal tt dir with precheck directory."""
     precheck_dir = tmp_path / "precheck"
     precheck_dir.mkdir(parents=True, exist_ok=True)
     if with_nix_file:
         (precheck_dir / "default.nix").write_text("# nix")
-    if tool_versions:
+    if tool_versions is not None:
         (precheck_dir / "tool-versions.json").write_text(json.dumps(tool_versions))
     return tmp_path
 
